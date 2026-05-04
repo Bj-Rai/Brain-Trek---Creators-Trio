@@ -2,9 +2,9 @@
 ---
 
 ## Project Progress
-- Day 1: Discussed and planned the idea  
-- Day 2: Designed the game concept  
-- Day 3: Started coding  
+- STEP 1: Discussed and planned the idea  
+- STEP 2: Designed the game concept  
+- STEP 3: Started coding  
 (To be updated regularly)
 
 ---
