@@ -1,1026 +1,467 @@
-# =========================================================
-# BRAIN TREK - REALISTIC FOREST EDITION
-# =========================================================
-# INSTALL:
-# pip install pygame
-#
-# RUN:
-# python brain_trek.py
-# =========================================================
-
 import pygame
-import random
-import math
 import sys
+import random
 
-pygame.init()
-
-# =========================================================
-# WINDOW
-# =========================================================
-
-WIDTH = 1280
-HEIGHT = 720
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Brain Trek - Realistic Forest")
-
-clock = pygame.time.Clock()
+# --- Window Configurations ---
+WIDTH = 1000
+HEIGHT = 700
+WORLD_SIZE = 3000 
 FPS = 60
 
-# =========================================================
-# WORLD
-# =========================================================
+# --- Color Constants ---
+C_GOLD = (255, 215, 0)
+C_RED = (255, 50, 50)
+C_WHITE = (255, 255, 255)
+C_YELLOW = (255, 255, 0)
+C_DARK = (20, 20, 30)
+C_BLUE = (0, 50, 150)
+C_GRAY = (70, 70, 90)
+C_GREEN = (0, 255, 100)
 
-WORLD_SIZE = 5000
-PLAYER_SPEED = 4
-
-# =========================================================
-# GAME SETTINGS
-# =========================================================
-
-QUIZ_TIME = 20
-HINT_COST = 500
-START_LIVES = 5
-
-# =========================================================
-# COLORS
-# =========================================================
-
-WHITE = (255, 255, 255)
-BLACK = (10, 10, 10)
-
-GOLD = (255, 210, 0)
-RED = (255, 70, 70)
-
-# =========================================================
-# FONTS
-# =========================================================
-
-font = pygame.font.SysFont("Arial", 24, bold=True)
-small_font = pygame.font.SysFont("Arial", 18, bold=True)
-big_font = pygame.font.SysFont("Arial", 52, bold=True)
-
-# =========================================================
-# QUESTIONS
-# =========================================================
-
-QUESTIONS = [
-
-    # SCIENCE
-    {
-        "category": "Science",
-        "q": "What gas do plants absorb?",
-        "a": "carbon dioxide",
-        "h": "Used in photosynthesis"
+# --- Level 1-10 Chart Database ---
+LEVEL_DATA = {
+    1: {
+        "subj": "Science",
+        "q": "Which gas do trees release?",
+        "a": "oxygen",
+        "r": 10
     },
-
-    {
-        "category": "Science",
-        "q": "Living and nonliving things together form an?",
-        "a": "ecosystem",
-        "h": "Starts with E"
+    2: {
+        "subj": "Mathematics",
+        "q": "What is 8 * 5?",
+        "a": "40",
+        "r": 10
     },
-
-    # MATHEMATICS
-    {
-        "category": "Mathematics",
-        "q": "Solve: 144 / 12",
-        "a": "12",
-        "h": "A dozen"
+    3: {
+        "subj": "History",
+        "q": "Who was the first king of Bhutan?",
+        "a": "ugyen wangchuck",
+        "r": 10
     },
-
-    {
-        "category": "Mathematics",
-        "q": "Solve: 15 x 8",
-        "a": "120",
-        "h": "15 x 4 x 2"
+    4: {
+        "subj": "Economics",
+        "q": "If you have 50 gold and spend 20, how much remains?",
+        "a": "30",
+        "r": 15
     },
-
-    # ECONOMICS
-    {
-        "category": "Economics",
-        "q": "Human effort in production is called?",
-        "a": "labor",
-        "h": "L _ b _ r"
+    5: {
+        "subj": "Science",
+        "q": "What is the role of decomposers in an ecosystem?",
+        "a": "break down dead organisms",
+        "r": 20
     },
-
-    {
-        "category": "Economics",
-        "q": "Money earned from savings is?",
-        "a": "interest",
-        "h": "Starts with I"
+    6: {
+        "subj": "Mathematics",
+        "q": "Solve: (12 + 8) / 4",
+        "a": "5",
+        "r": 20
     },
-
-    # HISTORY
-    {
-        "category": "History",
-        "q": "Who is the Father of Modern Bhutan?",
-        "a": "jigme dorji wangchuck",
-        "h": "The 3rd King"
+    7: {
+        "subj": "History",
+        "q": "In which year was Bhutan's Constitution adopted?",
+        "a": "2008",
+        "r": 20
     },
-
-    {
-        "category": "History",
-        "q": "Bhutan National Day is celebrated in which month?",
-        "a": "december",
-        "h": "Last month"
+    8: {
+        "subj": "Economics",
+        "q": "What happens when demand increases but supply stays same?",
+        "a": "price increases",
+        "r": 25
+    },
+    9: {
+        "subj": "Science/Logic",
+        "q": "Why are forests important for biodiversity?",
+        "a": "they provide habitat/support many species",
+        "r": 30
+    },
+    10: {
+        "subj": "Mixed Challenge",
+        "q": "What is 2008 + 5 * 2?",
+        "a": "2018",
+        "r": 30
     }
-]
+}
 
-# =========================================================
-# PLAYER
-# =========================================================
-
-class Player:
-
-    def __init__(self, x, y):
-
-        self.x = x
-        self.y = y
-
-        self.walk = 0
-
-    def rect(self):
-
-        return pygame.Rect(self.x, self.y, 32, 42)
-
-    def move(self, keys):
-
-        moving = False
-
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-            self.x -= PLAYER_SPEED
-            moving = True
-
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-            self.x += PLAYER_SPEED
-            moving = True
-
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
-            self.y -= PLAYER_SPEED
-            moving = True
-
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            self.y += PLAYER_SPEED
-            moving = True
-
-        if moving:
-            self.walk += 0.15
-
-        self.x = max(0, min(self.x, WORLD_SIZE))
-        self.y = max(0, min(self.y, WORLD_SIZE))
-
-    def draw(self, screen, cam_x, cam_y):
-
-        px = self.x + cam_x
-        py = self.y + cam_y
-
-        bounce = math.sin(self.walk) * 1.5
-
-        # SHADOW
-        pygame.draw.ellipse(
-            screen,
-            (0, 0, 0),
-            (px + 5, py + 34, 22, 8)
-        )
-
-        # LEGS
-        pygame.draw.line(
-            screen,
-            BLACK,
-            (px + 10, py + 25),
-            (px + 10, py + 36 + bounce),
-            3
-        )
-
-        pygame.draw.line(
-            screen,
-            BLACK,
-            (px + 20, py + 25),
-            (px + 20, py + 36 - bounce),
-            3
-        )
-
-        # BODY
-        pygame.draw.rect(
-            screen,
-            (40, 70, 200),
-            (px, py + bounce, 30, 28),
-            border_radius=8
-        )
-
-        # HEAD
-        pygame.draw.circle(
-            screen,
-            (255, 220, 180),
-            (int(px + 15), int(py - 2 + bounce)),
-            12
-        )
-
-# =========================================================
-# GAME
-# =========================================================
-
-class BrainTrek:
-
+class BrainTrekGame:
     def __init__(self):
-
-        self.reset_game()
-
-    # =====================================================
-    # RESET GAME
-    # =====================================================
-
-    def reset_game(self):
-
-        self.player = Player(
-            WORLD_SIZE // 2,
-            WORLD_SIZE // 2
-        )
-
-        self.cam_x = 0
-        self.cam_y = 0
-
+        pygame.init()
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Brain Trek")
+        self.clock = pygame.time.Clock()
+        
+        # Typography Assets
+        self.font = pygame.font.SysFont("Arial", 22, bold=True)
+        self.btn_font = pygame.font.SysFont("Arial", 20, bold=True)
+        self.title_font = pygame.font.SysFont("Arial", 40, bold=True)
+        
+        # Mode Mechanics Settings
+        self.modes = {
+            1: {
+                "name": "Casual Mode",
+                "desc": "10 Lives Available",
+                "lives": 10,
+                "bg": (34, 110, 34),
+                "tree": (15, 60, 15),
+                "card": (24, 76, 24)
+            },
+            2: {
+                "name": "Scholar Mode",
+                "desc": "5 Lives Available",
+                "lives": 5,
+                "bg": (120, 110, 95),
+                "tree": (80, 75, 65),
+                "card": (89, 81, 69)
+            },
+            3: {
+                "name": "Survival Mode",
+                "desc": "1 Life Challenge",
+                "lives": 1,
+                "bg": (145, 130, 155),
+                "tree": (75, 60, 85),
+                "card": (95, 75, 105)
+            }
+        }
+        
+        # Application Status Vectors
+        self.state = "HOME_MENU"
+        self.player_name = ""
         self.gold = 0
-        self.lives = START_LIVES
-
-        self.state = "MENU"
-
-        self.user_input = ""
-
+        self.current_level = 1
+        self.lives = 5
         self.feedback = ""
         self.feedback_timer = 0
-
-        self.hint_bought = False
-
-        # =================================================
-        # FOREST OBJECTS
-        # =================================================
-
-        self.trees = []
-
-        for _ in range(700):
-
-            self.trees.append((
-                random.randint(0, WORLD_SIZE),
-                random.randint(0, WORLD_SIZE),
-                random.randint(45, 90)
-            ))
-
-        self.flowers = []
-
-        for _ in range(2500):
-
-            self.flowers.append((
-                random.randint(0, WORLD_SIZE),
-                random.randint(0, WORLD_SIZE),
-                random.choice([
-                    (255, 120, 120),
-                    (255, 255, 120),
-                    (255, 180, 255),
-                    (120, 220, 255),
-                    (255, 180, 90),
-                    (255, 255, 255)
-                ])
-            ))
-
-        self.grass = []
-
-        for _ in range(4000):
-
-            self.grass.append((
-                random.randint(0, WORLD_SIZE),
-                random.randint(0, WORLD_SIZE)
-            ))
-
-        self.rocks = []
-
-        for _ in range(250):
-
-            self.rocks.append((
-                random.randint(0, WORLD_SIZE),
-                random.randint(0, WORLD_SIZE),
-                random.randint(10, 20)
-            ))
-
-        # =================================================
-        # CHESTS
-        # =================================================
-
-        self.chests = []
-
-        for _ in range(20):
-
-            self.chests.append(
-                pygame.Rect(
-                    random.randint(100, WORLD_SIZE - 100),
-                    random.randint(100, WORLD_SIZE - 100),
-                    40,
-                    30
-                )
-            )
-
-    # =====================================================
-    # START QUIZ
-    # =====================================================
-
-    def start_quiz(self):
-
-        self.current_question = random.choice(QUESTIONS)
-
         self.user_input = ""
+        
+        # UI Button Boundaries
+        self.start_btn = pygame.Rect(380, 500, 240, 60)
+        self.next_btn = pygame.Rect(380, 460, 240, 60)
+        self.mode_buttons = {}
 
-        self.hint_bought = False
+    def draw_home_menu(self):
+        self.screen.fill(C_DARK)
+        
+        t_s = self.title_font.render("BRAIN TREK", True, C_GOLD)
+        self.screen.blit(t_s, (WIDTH // 2 - t_s.get_width() // 2, 80))
+        
+        i1 = "Roam the maps, collect the chests, and crack quizzes."
+        i2 = "Progress sequentially from Level 1 up through Level 10!"
+        s1 = self.font.render(i1, True, C_WHITE)
+        s2 = self.font.render(i2, True, C_WHITE)
+        self.screen.blit(s1, (WIDTH // 2 - s1.get_width() // 2, 210))
+        self.screen.blit(s2, (WIDTH // 2 - s2.get_width() // 2, 245))
+        
+        d1 = "DEVELOPERS:"
+        d2 = "Reegyel, Bikash, Krishna"
+        d1_s = self.font.render(d1, True, C_GOLD)
+        d2_s = self.font.render(d2, True, C_YELLOW)
+        self.screen.blit(d1_s, (WIDTH // 2 - d1_s.get_width() // 2, 340))
+        self.screen.blit(d2_s, (WIDTH // 2 - d2_s.get_width() // 2, 375))
+        
+        m_pos = pygame.mouse.get_pos()
+        is_hov = self.start_btn.collidepoint(m_pos)
+        b_col = C_GOLD if is_hov else (210, 165, 45)
+        pygame.draw.rect(self.screen, b_col, self.start_btn, border_radius=15)
+        
+        btn_s = self.btn_font.render("START GAME", True, C_DARK)
+        self.screen.blit(btn_s, (self.start_btn.centerx - btn_s.get_width() // 2, self.start_btn.centery - btn_s.get_height() // 2))
 
-        self.quiz_start = pygame.time.get_ticks()
+    def draw_name_input(self):
+        self.screen.fill(C_DARK)
+        p_s = self.title_font.render("REGISTER EXPLORER NAME", True, C_GOLD)
+        self.screen.blit(p_s, (WIDTH // 2 - p_s.get_width() // 2, 160))
+        
+        sub = "Type your username profile label, then press ENTER to lock in"
+        sub_s = self.font.render(sub, True, C_WHITE)
+        self.screen.blit(sub_s, (WIDTH // 2 - sub_s.get_width() // 2, 240))
+        
+        box_rect = pygame.Rect(250, 320, 500, 65)
+        pygame.draw.rect(self.screen, C_GRAY, box_rect, border_radius=12)
+        pygame.draw.rect(self.screen, C_GOLD, box_rect, 3, border_radius=12)
+        
+        disp_name = self.player_name + "_"
+        name_s = self.title_font.render(disp_name, True, C_YELLOW)
+        self.screen.blit(name_s, (280, box_rect.centery - name_s.get_height() // 2))
 
-        self.state = "QUIZ"
+    def draw_mode_menu(self):
+        self.screen.fill(C_DARK)
+        t_s = self.title_font.render("SELECT GAMEPLAY DIFFICULTY", True, C_GOLD)
+        self.screen.blit(t_s, (WIDTH // 2 - t_s.get_width() // 2, 60))
+        
+        m_pos = pygame.mouse.get_pos()
+        card_w, card_h = 240, 380
+        start_y = 180
+        gap = 45
+        total_w = (3 * card_w) + (2 * gap)
+        start_x = (WIDTH - total_w) // 2
+        
+        for i, m_data in self.modes.items():
+            cx = start_x + (i - 1) * (card_w + gap)
+            card_rect = pygame.Rect(cx, start_y, card_w, card_h)
+            self.mode_buttons[i] = card_rect
+            
+            is_hov = card_rect.collidepoint(m_pos)
+            b_color = (255, 235, 100) if is_hov else (160, 140, 100)
+            
+            pygame.draw.rect(self.screen, m_data["card"], card_rect, border_radius=18)
+            pygame.draw.rect(self.screen, b_color, card_rect, 3, border_radius=18)
+            
+            w_rect = pygame.Rect(cx + 15, start_y + 15, card_w - 30, 130)
+            pygame.draw.rect(self.screen, m_data["bg"], w_rect, border_radius=10)
+            
+            n_s = self.font.render(m_data["name"], True, C_WHITE)
+            d_s = self.font.render(m_data["desc"], True, C_YELLOW)
+            
+            self.screen.blit(n_s, (cx + 25, start_y + 170))
+            self.screen.blit(d_s, (cx + 25, start_y + 210))
+            
+            btn = pygame.Rect(cx + 25, start_y + 300, card_w - 50, 45)
+            btn_col = C_GOLD if is_hov else (210, 165, 45)
+            pygame.draw.rect(self.screen, btn_col, btn, border_radius=12)
+            
+            sel_s = self.btn_font.render("LAUNCH", True, C_DARK)
+            self.screen.blit(sel_s, (btn.centerx - sel_s.get_width() // 2, btn.centery - sel_s.get_height() // 2))
 
-    # =====================================================
-    # CORRECT ANSWER
-    # =====================================================
+    def start_game_mode(self, mode_idx):
+        m = self.modes[mode_idx]
+        self.current_mode_name = m["name"]
+        self.lives = m["lives"]
+        self.bg_color = m["bg"]
+        self.tree_color = m["tree"]
+        self.gold = 0
+        self.current_level = 1
+        
+        self.player_rect = pygame.Rect(WORLD_SIZE // 2, WORLD_SIZE // 2, 50, 70)
+        self.camera_offset = pygame.Vector2(0, 0)
+        
+        self.trees = [
+            pygame.Rect(random.randint(0, WORLD_SIZE), random.randint(0, WORLD_SIZE), 40, 40) 
+            for _ in range(90)
+        ]
+        self.respawn_chests()
+        self.state = "EXPLORING"
 
-    def correct_answer(self):
-
-        self.gold += 1000
-
-        self.feedback = "CORRECT! +1000 GOLD"
-
-        self.feedback_timer = pygame.time.get_ticks()
-
-        self.state = "PLAYING"
-
-    # =====================================================
-    # WRONG ANSWER
-    # =====================================================
-
-    def wrong_answer(self):
-
-        self.lives -= 1
-
-        self.feedback = "WRONG ANSWER! -1 LIFE"
-
-        self.feedback_timer = pygame.time.get_ticks()
-
-        self.state = "PLAYING"
-
-        if self.lives <= 0:
-
-            self.state = "GAMEOVER"
-
-    # =====================================================
-    # UPDATE
-    # =====================================================
-
-    def update(self):
-
-        keys = pygame.key.get_pressed()
-
-        if self.state == "PLAYING":
-
-            self.player.move(keys)
-
-            self.cam_x = WIDTH // 2 - self.player.x
-            self.cam_y = HEIGHT // 2 - self.player.y
-
-            # CHEST COLLISION
-            for chest in self.chests[:]:
-
-                if self.player.rect().colliderect(chest):
-
-                    self.chests.remove(chest)
-
-                    self.start_quiz()
-
-            # WIN
-            if len(self.chests) == 0:
-
-                self.state = "WIN"
-
-        # QUIZ TIMER
-        if self.state == "QUIZ":
-
-            elapsed = (
-                pygame.time.get_ticks() - self.quiz_start
-            ) / 1000
-
-            self.time_left = max(0, QUIZ_TIME - elapsed)
-
-            if self.time_left <= 0:
-
-                self.wrong_answer()
-
-    # =====================================================
-    # DRAW GROUND
-    # =====================================================
-
-    def draw_ground(self):
-
-        tile = 64
-
-        greens = [
-            (60, 150, 60),
-            (66, 160, 66),
-            (72, 170, 72),
-            (56, 145, 56)
+    def respawn_chests(self):
+        self.chests = [
+            pygame.Rect(random.randint(200, WORLD_SIZE - 200), random.randint(200, WORLD_SIZE - 200), 60, 45) 
+            for _ in range(5)
         ]
 
-        for x in range(0, WIDTH + tile, tile):
-
-            for y in range(0, HEIGHT + tile, tile):
-
-                c = greens[(x + y) // tile % len(greens)]
-
-                pygame.draw.rect(
-                    screen,
-                    c,
-                    (x, y, tile, tile)
-                )
-
-    # =====================================================
-    # DRAW WORLD
-    # =====================================================
-
-    def draw_world(self):
-
-        self.draw_ground()
-
-        # =================================================
-        # GRASS DETAILS
-        # =================================================
-
-        for g in self.grass:
-
-            gx = g[0] + self.cam_x
-            gy = g[1] + self.cam_y
-
-            if -5 < gx < WIDTH + 5 and -5 < gy < HEIGHT + 5:
-
-                pygame.draw.line(
-                    screen,
-                    (40, 130, 40),
-                    (gx, gy),
-                    (gx + 2, gy - 5),
-                    1
-                )
-
-        # =================================================
-        # FLOWERS
-        # =================================================
-
-        for flower in self.flowers:
-
-            fx = flower[0] + self.cam_x
-            fy = flower[1] + self.cam_y
-
-            if -5 < fx < WIDTH + 5 and -5 < fy < HEIGHT + 5:
-
-                pygame.draw.circle(
-                    screen,
-                    flower[2],
-                    (int(fx), int(fy)),
-                    2
-                )
-
-        # =================================================
-        # ROCKS
-        # =================================================
-
-        for rock in self.rocks:
-
-            rx = rock[0] + self.cam_x
-            ry = rock[1] + self.cam_y
-
-            if -40 < rx < WIDTH + 40 and -40 < ry < HEIGHT + 40:
-
-                pygame.draw.circle(
-                    screen,
-                    (120, 120, 120),
-                    (int(rx), int(ry)),
-                    rock[2]
-                )
-
-                pygame.draw.circle(
-                    screen,
-                    (150, 150, 150),
-                    (int(rx - 3), int(ry - 3)),
-                    rock[2] - 4
-                )
-
-        # =================================================
-        # TREES
-        # =================================================
-
-        for tree in self.trees:
-
-            tx, ty, size = tree
-
-            tx += self.cam_x
-            ty += self.cam_y
-
-            if -120 < tx < WIDTH + 120 and -120 < ty < HEIGHT + 120:
-
-                # SHADOW
-                pygame.draw.ellipse(
-                    screen,
-                    (0, 0, 0),
-                    (tx + 12, ty + size - 8, size - 20, 18)
-                )
-
-                # TRUNK
-                pygame.draw.rect(
-                    screen,
-                    (110, 70, 30),
-                    (
-                        tx + size//2 - 8,
-                        ty + size - 18,
-                        16,
-                        32
-                    )
-                )
-
-                # DARK LEAVES
-                pygame.draw.circle(
-                    screen,
-                    (20, 90, 20),
-                    (
-                        int(tx + size//2),
-                        int(ty + size//2)
-                    ),
-                    size//2
-                )
-
-                # MID LEAVES
-                pygame.draw.circle(
-                    screen,
-                    (35, 130, 35),
-                    (
-                        int(tx + size//2 - 12),
-                        int(ty + size//2 - 10)
-                    ),
-                    size//2 - 8
-                )
-
-                # LIGHT LEAVES
-                pygame.draw.circle(
-                    screen,
-                    (60, 180, 60),
-                    (
-                        int(tx + size//2 + 10),
-                        int(ty + size//2 - 12)
-                    ),
-                    size//2 - 16
-                )
-
-        # =================================================
-        # CHESTS
-        # =================================================
-
-        for chest in self.chests:
-
-            cx = chest.x + self.cam_x
-            cy = chest.y + self.cam_y
-
-            # SHADOW
-            pygame.draw.ellipse(
-                screen,
-                BLACK,
-                (cx + 4, cy + 25, 30, 8)
-            )
-
-            # BODY
-            pygame.draw.rect(
-                screen,
-                (140, 90, 25),
-                (cx, cy, 40, 28),
-                border_radius=5
-            )
-
-            # TOP
-            pygame.draw.rect(
-                screen,
-                GOLD,
-                (cx + 2, cy + 2, 36, 13),
-                border_radius=5
-            )
-
-            # LOCK
-            pygame.draw.rect(
-                screen,
-                BLACK,
-                (cx + 16, cy + 6, 8, 8)
-            )
-
-        # =================================================
-        # PLAYER
-        # =================================================
-
-        self.player.draw(screen, self.cam_x, self.cam_y)
-
-    # =====================================================
-    # HUD
-    # =====================================================
-
-    def draw_hud(self):
-
-        pygame.draw.rect(
-            screen,
-            BLACK,
-            (0, 0, WIDTH, 65)
-        )
-
-        gold = font.render(
-            f"GOLD: {self.gold}",
-            True,
-            GOLD
-        )
-
-        lives = font.render(
-            f"LIVES: {self.lives}",
-            True,
-            RED
-        )
-
-        chests = font.render(
-            f"CHESTS LEFT: {len(self.chests)}",
-            True,
-            WHITE
-        )
-
-        screen.blit(gold, (20, 18))
-        screen.blit(lives, (220, 18))
-        screen.blit(chests, (520, 18))
-
-        if pygame.time.get_ticks() - self.feedback_timer < 2500:
-
-            msg = font.render(
-                self.feedback,
-                True,
-                WHITE
-            )
-
-            screen.blit(
-                msg,
-                (WIDTH//2 - msg.get_width()//2, 80)
-            )
-
-    # =====================================================
-    # CONTROLS BAR
-    # =====================================================
-
-    def draw_controls(self):
-
-        pygame.draw.rect(
-            screen,
-            BLACK,
-            (0, HEIGHT - 60, WIDTH, 60)
-        )
-
-        move = small_font.render(
-            "WASD = MOVE",
-            True,
-            WHITE
-        )
-
-        hint = small_font.render(
-            "2 = BUY HINT (500 GOLD)",
-            True,
-            GOLD
-        )
-
-        enter = small_font.render(
-            "ENTER = SUBMIT ANSWER",
-            True,
-            WHITE
-        )
-
-        restart = small_font.render(
-            "R = RESTART",
-            True,
-            WHITE
-        )
-
-        screen.blit(move, (40, HEIGHT - 38))
-        screen.blit(hint, (330, HEIGHT - 38))
-        screen.blit(enter, (670, HEIGHT - 38))
-        screen.blit(restart, (1040, HEIGHT - 38))
-
-    # =====================================================
-    # QUIZ BOX
-    # =====================================================
-
-    def draw_quiz(self):
-
-        overlay = pygame.Surface(
-            (WIDTH, HEIGHT),
-            pygame.SRCALPHA
-        )
-
-        overlay.fill((0, 0, 0, 190))
-
-        screen.blit(overlay, (0, 0))
-
-        box = pygame.Rect(180, 160, 920, 340)
-
-        pygame.draw.rect(
-            screen,
-            (35, 35, 45),
-            box,
-            border_radius=20
-        )
-
-        pygame.draw.rect(
-            screen,
-            GOLD,
-            box,
-            3,
-            border_radius=20
-        )
-
-        # CATEGORY
-        cat = font.render(
-            f"CATEGORY: {self.current_question['category']}",
-            True,
-            GOLD
-        )
-
-        screen.blit(cat, (240, 210))
-
-        # QUESTION
-        q = font.render(
-            self.current_question["q"],
-            True,
-            WHITE
-        )
-
-        screen.blit(q, (240, 280))
-
-        # HINT
-        if self.hint_bought:
-
-            hint = font.render(
-                f"HINT: {self.current_question['h']}",
-                True,
-                (120, 255, 120)
-            )
-
+    def check_answer(self):
+        ans = self.user_input.lower().strip()
+        q_info = LEVEL_DATA[self.current_level]
+        correct_target = q_info["a"]
+        
+        is_correct = False
+        if self.current_level == 5:
+            if "break" in ans or "dead" in ans or "organism" in ans:
+                is_correct = True
+        elif self.current_level == 9:
+            if "habitat" in ans or "species" in ans or "provide" in ans:
+                is_correct = True
         else:
+            if ans == correct_target:
+                is_correct = True
+                
+        if is_correct:
+            reward = q_info["r"]
+            self.gold += reward
+            self.feedback = f"CORRECT! +{reward} GOLD"
+            self.feedback_timer = pygame.time.get_ticks()
+            self.state = "LEVEL_VICTORY"
+        else:
+            self.lives -= 1
+            self.feedback = "WRONG ANSWER! LIFE LOST."
+            self.feedback_timer = pygame.time.get_ticks()
+            if self.lives <= 0:
+                self.state = "GAME_OVER"
+            else:
+                self.state = "EXPLORING"
+        self.user_input = ""
 
-            hint = font.render(
-                "PRESS 2 TO BUY HINT (-500 GOLD)",
-                True,
-                (180, 180, 180)
-            )
+    def draw_level_victory(self):
+        self.screen.fill(C_DARK)
+        
+        v_s = self.title_font.render("✨ VICTORY! ✨", True, C_GOLD)
+        self.screen.blit(v_s, (WIDTH // 2 - v_s.get_width() // 2, 160))
+        
+        txt = f"Level {self.current_level} Answered Correctly!"
+        txt_s = self.font.render(txt, True, C_WHITE)
+        self.screen.blit(txt_s, (WIDTH // 2 - txt_s.get_width() // 2, 250))
+        
+        g_txt = f"Current Wealth: {self.gold} Gold"
+        g_s = self.font.render(g_txt, True, C_YELLOW)
+        self.screen.blit(g_s, (WIDTH // 2 - g_s.get_width() // 2, 310))
+        
+        m_pos = pygame.mouse.get_pos()
+        is_hov = self.next_btn.collidepoint(m_pos)
+        b_col = C_GREEN if is_hov else (0, 180, 80)
+        pygame.draw.rect(self.screen, b_col, self.next_btn, border_radius=12)
+        
+        btn_txt = "NEXT LEVEL" if self.current_level < 10 else "FINAL RESULTS"
+        b_s = self.btn_font.render(btn_txt, True, C_DARK)
+        self.screen.blit(b_s, (self.next_btn.centerx - b_s.get_width() // 2, self.next_btn.centery - b_s.get_height() // 2))
 
-        screen.blit(hint, (240, 340))
+    def draw_final_victory(self):
+        self.screen.fill(C_DARK)
+        v_s = self.title_font.render("🏆 GRAND VICTORY 🏆", True, C_GOLD)
+        self.screen.blit(v_s, (WIDTH // 2 - v_s.get_width() // 2, 200))
+        
+        msg = f"Explorer {self.player_name} conquered all 10 Levels!"
+        m_s = self.font.render(msg, True, C_WHITE)
+        self.screen.blit(m_s, (WIDTH // 2 - m_s.get_width() // 2, 290))
+        
+        g_s = self.title_font.render(f"TOTAL SCORE: {self.gold} GOLD", True, C_YELLOW)
+        self.screen.blit(g_s, (WIDTH // 2 - g_s.get_width() // 2, 360))
+        
+        r_s = self.font.render("Press ENTER to return to Home Page", True, C_GRAY)
+        self.screen.blit(r_s, (WIDTH // 2 - r_s.get_width() // 2, 510))
 
-        # ANSWER
-        ans = font.render(
-            f"ANSWER: {self.user_input}",
-            True,
-            WHITE
-        )
-
-        screen.blit(ans, (240, 410))
-
-        # TIMER
-        timer = font.render(
-            f"TIME LEFT: {int(self.time_left)}",
-            True,
-            RED
-        )
-
-        screen.blit(timer, (240, 460))
-
-    # =====================================================
-    # MENU
-    # =====================================================
-
-    def draw_menu(self):
-
-        screen.fill((20, 20, 30))
-
-        title = big_font.render(
-            "BRAIN TREK",
-            True,
-            GOLD
-        )
-
-        sub = font.render(
-            "REALISTIC FOREST EDITION",
-            True,
-            WHITE
-        )
-
-        start = font.render(
-            "PRESS SPACE TO START",
-            True,
-            WHITE
-        )
-
-        screen.blit(
-            title,
-            (WIDTH//2 - title.get_width()//2, 220)
-        )
-
-        screen.blit(
-            sub,
-            (WIDTH//2 - sub.get_width()//2, 320)
-        )
-
-        screen.blit(
-            start,
-            (WIDTH//2 - start.get_width()//2, 420)
-        )
-
-    # =====================================================
-    # GAME OVER
-    # =====================================================
-
-    def draw_gameover(self):
-
-        screen.fill(BLACK)
-
-        title = big_font.render(
-            "GAME OVER",
-            True,
-            RED
-        )
-
-        restart = font.render(
-            "PRESS R TO RESTART",
-            True,
-            WHITE
-        )
-
-        screen.blit(
-            title,
-            (WIDTH//2 - title.get_width()//2, 260)
-        )
-
-        screen.blit(
-            restart,
-            (WIDTH//2 - restart.get_width()//2, 360)
-        )
-
-    # =====================================================
-    # WIN
-    # =====================================================
-
-    def draw_win(self):
-
-        screen.fill((25, 90, 40))
-
-        title = big_font.render(
-            "YOU WON!",
-            True,
-            GOLD
-        )
-
-        score = font.render(
-            f"FINAL GOLD: {self.gold}",
-            True,
-            WHITE
-        )
-
-        restart = font.render(
-            "PRESS R TO PLAY AGAIN",
-            True,
-            WHITE
-        )
-
-        screen.blit(
-            title,
-            (WIDTH//2 - title.get_width()//2, 240)
-        )
-
-        screen.blit(
-            score,
-            (WIDTH//2 - score.get_width()//2, 330)
-        )
-
-        screen.blit(
-            restart,
-            (WIDTH//2 - restart.get_width()//2, 420)
-        )
-
-    # =====================================================
-    # MAIN LOOP
-    # =====================================================
+    def draw_game_over(self):
+        self.screen.fill(C_DARK)
+        o_s = self.title_font.render("💀 GAME OVER 💀", True, C_RED)
+        self.screen.blit(o_s, (WIDTH // 2 - o_s.get_width() // 2, 220))
+        
+        r_s = self.font.render("Press ENTER to return to Home Page", True, C_WHITE)
+        self.screen.blit(r_s, (WIDTH // 2 - r_s.get_width() // 2, 340))
 
     def run(self):
-
         while True:
-
-            clock.tick(FPS)
-
-            # EVENTS
             for event in pygame.event.get():
-
-                if event.type == pygame.QUIT:
-
+                if event.type == pygame.QUIT: 
                     pygame.quit()
                     sys.exit()
-
-                # MENU
-                if self.state == "MENU":
-
-                    if event.type == pygame.KEYDOWN:
-
-                        if event.key == pygame.K_SPACE:
-
-                            self.state = "PLAYING"
-
-                # QUIZ
-                if self.state == "QUIZ":
-
-                    if event.type == pygame.KEYDOWN:
-
-                        # BUY HINT
-                        if event.key == pygame.K_2:
-
-                            if not self.hint_bought:
-
-                                if self.gold >= HINT_COST:
-
-                                    self.gold -= HINT_COST
-
-                                    self.hint_bought = True
-
-                                    self.feedback = "HINT PURCHASED"
-
-                                else:
-
-                                    self.feedback = "NOT ENOUGH GOLD"
-
-                                self.feedback_timer = pygame.time.get_ticks()
-
-                        # SUBMIT
-                        elif event.key == pygame.K_RETURN:
-
-                            if self.user_input.lower().strip() == self.current_question["a"]:
-
-                                self.correct_answer()
-
-                            else:
-
-                                self.wrong_answer()
-
-                        # DELETE
-                        elif event.key == pygame.K_BACKSPACE:
-
-                            self.user_input = self.user_input[:-1]
-
-                        else:
-
+                
+                if self.state == "HOME_MENU" and event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1 and self.start_btn.collidepoint(event.pos):
+                        self.state = "NAME_INPUT"
+                        
+                elif self.state == "NAME_INPUT" and event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        if len(self.player_name.strip()) > 0:
+                            self.state = "MODE_MENU"
+                    elif event.key == pygame.K_BACKSPACE:
+                        self.player_name = self.player_name[:-1]
+                    else:
+                        if len(self.player_name) < 14 and event.unicode.isalnum():
+                            self.player_name += event.unicode
+                            
+                elif self.state == "MODE_MENU" and event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        for idx, btn in self.mode_buttons.items():
+                            if btn.collidepoint(event.pos):
+                                self.start_game_mode(idx)
+                
+                elif self.state == "QUIZ" and event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.check_answer()
+                    elif event.key == pygame.K_BACKSPACE:
+                        self.user_input = self.user_input[:-1]
+                    else:
+                        if len(self.user_input) < 40:
                             self.user_input += event.unicode
+                            
+                elif self.state == "LEVEL_VICTORY" and event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1 and self.next_btn.collidepoint(event.pos):
+                        if self.current_level >= 10:
+                            self.state = "FINAL_VICTORY"
+                        else:
+                            self.current_level += 1
+                            self.respawn_chests()
+                            self.state = "EXPLORING"
+                            
+                elif self.state in ["FINAL_VICTORY", "GAME_OVER"] and event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.player_name = ""
+                        self.state = "HOME_MENU"
 
-                # RESTART
-                if self.state in ["GAMEOVER", "WIN"]:
+            if self.state == "EXPLORING":
+                keys = pygame.key.get_pressed()
+                spd = 8
+                if keys[pygame.K_LEFT]: self.player_rect.x -= spd
+                if keys[pygame.K_RIGHT]: self.player_rect.x += spd
+                if keys[pygame.K_UP]: self.player_rect.y -= spd
+                if keys[pygame.K_DOWN]: self.player_rect.y += spd
+                
+                # Keep within bounds
+                self.player_rect.x = max(0, min(self.player_rect.x, WORLD_SIZE - 50))
+                self.player_rect.y = max(0, min(self.player_rect.y, WORLD_SIZE - 70))
+                
+                self.camera_offset.x = -(self.player_rect.centerx - WIDTH // 2)
+                self.camera_offset.y = -(self.player_rect.centery - HEIGHT // 2)
 
-                    if event.type == pygame.KEYDOWN:
+                for chest in self.chests[:]:
+                    if self.player_rect.colliderect(chest):
+                        self.state = "QUIZ"
+                        self.chests.remove(chest)
 
-                        if event.key == pygame.K_r:
+            # --- Graphics Pipeline Routing ---
+            if self.state == "HOME_MENU":
+                self.draw_home_menu()
+            elif self.state == "NAME_INPUT":
+                self.draw_name_input()
+            elif self.state == "MODE_MENU":
+                self.draw_mode_menu()
+            elif self.state == "LEVEL_VICTORY":
+                self.draw_level_victory()
+            elif self.state == "FINAL_VICTORY":
+                self.draw_final_victory()
+            elif self.state == "GAME_OVER":
+                self.draw_game_over()
+            else:
+                self.screen.fill(self.bg_color)
+                for t in self.trees:
+                    cx = t.x + int(self.camera_offset.x)
+                    cy = t.y + int(self.camera_offset.y)
+                    pygame.draw.circle(self.screen, self.tree_color, (cx, cy), 40)
+                    
+                for c in self.chests:
+                    cx = c.left + int(self.camera_offset.x)
+                    cy = c.top + int(self.camera_offset.y)
+                    pygame.draw.rect(self.screen, (255, 200, 0), ((cx, cy), (50, 35)))
 
-                            self.reset_game()
-
-            # UPDATE
-            self.update()
-
-            # DRAW
-            if self.state == "MENU":
-
-                self.draw_menu()
-
-            elif self.state in ["PLAYING", "QUIZ"]:
-
-                self.draw_world()
-
-                self.draw_hud()
-
-                self.draw_controls()
+                p_pos = self.player_rect.topleft + self.camera_offset
+                pygame.draw.rect(self.screen, C_BLUE, (p_pos.x, p_pos.y, 50, 60), border_radius=8)
+                pygame.draw.circle(self.screen, (255, 220, 180), (int(p_pos.x + 25), int(p_pos.y - 12)), 22)
 
                 if self.state == "QUIZ":
+                    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+                    overlay.fill((0, 0, 0, 210))
+                    self.screen.blit(overlay, (0, 0))
+                    
+                    pygame.draw.rect(self.screen, (50, 50, 75), (100, 180, 800, 340), border_radius=15)
+                    pygame.draw.rect(self.screen, C_GOLD, (100, 180, 800, 340), 3, border_radius=15)
+                    
+                    q_data = LEVEL_DATA[self.current_level]
+                    header_str = f"LEVEL {self.current_level} - {q_data['subj']}"
+                    self.screen.blit(self.font.render(header_str, True, C_GOLD), (140, 210))
+                    self.screen.blit(self.font.render(q_data["q"], True, C_WHITE), (140, 260))
+                    
+                    in_str = f"Your Answer: {self.user_input}"
+                    self.screen.blit(self.font.render(in_str, True, C_YELLOW), (140, 340))
+                    
+                    h_str = "(Type response line and hit ENTER to submit answer)"
+                    self.screen.blit(self.font.render(h_str, True, C_GRAY), (140, 440))
 
-                    self.draw_quiz()
-
-            elif self.state == "GAMEOVER":
-
-                self.draw_gameover()
-
-            elif self.state == "WIN":
-
-                self.draw_win()
+                # Display HUD Panel
+                g_txt = self.font.render(f"GOLD: {self.gold}", True, C_GOLD)
+                l_txt = self.font.render(f"LIVES: {self.lives}", True, C_RED)
+                lvl_txt = self.font.render(f"LEVEL: {self.current_level}/10", True, C_GREEN)
+                n_txt = self.font.render(f"EXPLORER: {self.player_name}", True, C_WHITE)
+                
+                self.screen.blit(g_txt, (20, 20))
+                self.screen.blit(l_txt, (20, 55))
+                self.screen.blit(lvl_txt, (180, 20))
+                self.screen.blit(n_txt, (WIDTH - n_txt.get_width() - 20, 20))
+            
+            # Draw overlay banner alerts
+            now = pygame.time.get_ticks()
+            if now - self.feedback_timer < 2500 and self.feedback:
+                f_msg = self.font.render(self.feedback, True, C_WHITE)
+                self.screen.blit(f_msg, (WIDTH // 2 - f_msg.get_width() // 2, 130))
 
             pygame.display.flip()
-
-# =========================================================
-# START GAME
-# =========================================================
+            self.clock.tick(FPS)
 
 if __name__ == "__main__":
-
-    game = BrainTrek()
-
+    game = BrainTrekGame()
     game.run()
