@@ -7,6 +7,10 @@ import sys
 import array
 import subprocess
 
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
+IMAGE_DIR = os.path.join(PROJECT_DIR, "assets", "images")
+SOUND_DIR = os.path.join(PROJECT_DIR, "assets", "sounds")
+
 # ================= UTILS =================
 def clamp(v, a, b): return max(a, min(b, v))
 def lerp(a, b, t): return a + (b - a) * t
@@ -127,6 +131,7 @@ class Audio:
                 except Exception:
                     pass
                 bases.extend([
+                    SOUND_DIR,
                     os.getcwd(),
                     "/home/workdir/artifacts",
                     "/home/workdir/attachments",
@@ -828,6 +833,7 @@ class Game:
         self.cert_image = None
         def _load_signature(filename, max_dim=400):
             for base in (
+                IMAGE_DIR,
                 os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() else ".",
                 os.getcwd(),
                 "/home/workdir/artifacts",
@@ -869,6 +875,7 @@ class Game:
                 names.append(filename[:-4] + ".jpg")
                 names.append(filename[:-4] + ".jpeg")
             bases = [
+                IMAGE_DIR,
                 os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() else ".",
                 os.getcwd(),
                 "/home/workdir/artifacts",
@@ -915,6 +922,7 @@ class Game:
         self.cert_submitted = False
         # Title menu background art (image2.png home screen)
         for _tp in (
+            os.path.join(IMAGE_DIR, "image2.png"),
             os.path.join(os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else ".", "image2.png"),
             os.path.join(os.getcwd(), "image2.png"),
             "/home/workdir/artifacts/image2.png",
@@ -968,6 +976,7 @@ class Game:
         self.intro_bg = None
         self.intro_bg_scaled = None
         for _ip in (
+            os.path.join(IMAGE_DIR, "image3.png"),
             os.path.join(os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() else ".", "image3.png"),
             os.path.join(os.getcwd(), "image3.png"),
             "/home/workdir/artifacts/image3.png",
@@ -4974,7 +4983,7 @@ class Game:
             self.screen.blit(bg, (0, 0))
         else:
             self.screen.fill((22, 48, 32))
-            tip = self.small.render("Place image3.png next to the game file", True, (220, 230, 210))
+            tip = self.small.render("Place image3.png in assets/images", True, (220, 230, 210))
             self.screen.blit(tip, (W // 2 - tip.get_width() // 2, H // 2 - 10))
 
         # Soft vignette (edges only — keep center art clear)
@@ -5092,6 +5101,7 @@ class Game:
         if bg is None:
             # try load image2 on the fly
             for p in (
+                os.path.join(IMAGE_DIR, "image2.png"),
                 os.path.join(os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else ".", "image2.png"),
                 os.path.join(os.getcwd(), "image2.png"),
                 "/home/workdir/artifacts/image2.png",
@@ -5113,7 +5123,7 @@ class Game:
             self.screen.fill((20, 40, 30))
             t = self.title_f.render("BRAIN TREK", True, C_GOLD)
             self.screen.blit(t, (W // 2 - t.get_width() // 2, H // 2 - 40))
-            s = self.small.render("Place image2.png next to the game file", True, (180, 190, 180))
+            s = self.small.render("Place image2.png in assets/images", True, (180, 190, 180))
             self.screen.blit(s, (W // 2 - s.get_width() // 2, H // 2 + 20))
         # Hint
         tip = self.small.render("Start Exploration  ·  How to Play  ·  Customize   |   ENTER = start", True, (255, 255, 240))
@@ -5892,6 +5902,8 @@ class Game:
         logo = getattr(self, "cert_logo", None)
         if logo is None:
             for _lp in (
+                os.path.join(IMAGE_DIR, "image5.png"),
+                os.path.join(IMAGE_DIR, "image5.jpg"),
                 os.path.join(os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else ".", "image5.png"),
                 os.path.join(os.getcwd(), "image5.png"),
                 os.path.join(os.getcwd(), "image5.jpg"),

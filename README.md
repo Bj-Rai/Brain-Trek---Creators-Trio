@@ -97,4 +97,11 @@ NPCs:
 ## How to Run the Game
 1. Install Python  
 2. Download or clone the repository  
-3. Run the main file:
+3. Run the game from the project root:
+	```bash
+	python game.py
+	```
+
+On 64-bit Windows, launch `dist/BrainTrek.exe` to play without installing Python. The executable includes Pygame and the game assets.
+
+Game images are stored in `assets/images/`, and music tracks are stored in `assets/sounds/`.
